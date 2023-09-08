@@ -1,9 +1,13 @@
 setup:
 
+```bash
 npm install
 npm start
+```
 
 Users are reporting a bug stating that the app automaically checks them out after performing a checkin.
+<img width="1597" alt="Screenshot 2023-09-08 at 12 26 30 PM" src="https://github.com/LuizGsa21/CheckInBug/assets/8405562/a9f114b7-7b16-4c09-95c7-b160d04ce409">
+
 
 What you currenlty know?
 - Bug is hard to reproduce.
