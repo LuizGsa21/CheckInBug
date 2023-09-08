@@ -12,7 +12,7 @@ Users are reporting a bug stating that the app automaically checks them out afte
 What you currenlty know?
 - Bug is hard to reproduce.
 - The high flux in users exposed this bug
-- The bug is occuring once every ~7k checkins
+- Of ~7k checkins, 1 user will report this issue
 - The bug is not in the backend.
 - Users reporting the bug have not been forced checked out.
 
