@@ -1,0 +1,15 @@
+{
+  "name": "checkin",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "install": "npm run install-frontend && npm run install-backend",
+    "install-frontend": "cd frontend/CheckInApp && npm install",
+    "install-backend": "cd backend/CheckInApp && dotnet restore",
+    "start": "npm run start-frontend && npm run start-backend",
+    "start-backend": "cd backend/CheckInApp && dotnet run",
+    "start-frontend": "cd frontend/CheckInApp && npm run ios",
+    "force-checkout": "curl -X 'POST' 'http://localhost:5279/User/ForceCheckout' -H 'accept: */*' -d ''",
+    "get-user-info": "curl -X 'POST' 'http://localhost:5279/User/UserInfo' -H 'accept: */*' -d ''"
+  }
+}
