@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import axios from 'axios';
 import {fromCancelablePromise, simulateDelay} from './util';
 import {BehaviorSubject} from 'rxjs';
@@ -7,9 +8,11 @@ import {fromPromise} from 'rxjs/internal-compatibility';
 
 let axiosInstance = axios.create();
 
-const simulate = simulateDelay([0, 10, 10], 'User/UserInfo');
+const simulateUserInfoDelay = simulateDelay([0, 10, 10], 'User/UserInfo');
+const simulateCheckInDelay = simulateDelay([10], 'User/CheckIn');
+
 export class UserService {
-  static ignoreRefresh$ = new BehaviorSubject<boolean>(false);
+  private static ignoreRefresh$ = new BehaviorSubject<boolean>(false);
   static cancelPendingUserRefresh() {
     if (this.ignoreRefresh$.getValue()) {
       return;
@@ -18,36 +21,47 @@ export class UserService {
     this.ignoreRefresh$.next(false);
   }
 
-  static CheckIn(): Promise<
+  static async CheckIn(): Promise<
     | {status: 200; data: CheckInEvent; success: true}
     | {status: number; data: string | null; success: false}
   > {
-    return axiosInstance
-      .post('http://localhost:5279/User/CheckIn')
-      .catch(r => {
-        return {
-          status: r.response.status,
-          data: r.response.data,
-          success: r.status == 200,
-        };
-      })
-      .then(r => ({status: r.status, data: r.data, success: r.status == 200}));
+     try {
+       this.ignoreRefresh$.next(true);
+       return await axiosInstance
+           .post('http://localhost:5279/User/CheckIn')
+           .catch(r => {
+             return {
+               status: r.response.status,
+               data: r.response.data,
+               success: r.status == 200,
+             };
+           })
+           .then(r => ({status: r.status, data: r.data, success: r.status == 200}))
+     } finally {
+       this.ignoreRefresh$.next(false);
+     }
   }
 
-  static CheckOut(): Promise<
+  static async CheckOut(): Promise<
     | {status: 200; data: CheckInEvent; success: true}
     | {status: number; data: string | null; success: false}
   > {
-    return axiosInstance
-      .post('http://localhost:5279/User/CheckOut')
-      .catch(r => {
-        return {
-          status: r.response.status,
-          data: r.response.data,
-          success: r.status == 200,
-        };
-      })
-      .then(r => ({status: r.status, data: r.data, success: r.status == 200}));
+    try {
+      this.ignoreRefresh$.next(true);
+      return await axiosInstance
+          .post('http://localhost:5279/User/CheckOut')
+          .catch(r => {
+            return {
+              status: r.response.status,
+              data: r.response.data,
+              success: r.status == 200,
+            };
+          })
+          .then(r => simulateCheckInDelay().then(_ => r))
+          .then(r => ({status: r.status, data: r.data, success: r.status == 200}))
+    } finally {
+      this.ignoreRefresh$.next(false);
+    }
   }
 
   static UserInfo(): Promise<
@@ -62,7 +76,7 @@ export class UserService {
       });
     })
       .pipe(
-        flatMap(r => fromPromise(simulate()).pipe(map(() => r))),
+        flatMap(r => fromPromise(simulateUserInfoDelay()).pipe(map(() => r))),
         takeUntil(this.ignoreRefresh$.pipe(filter(ignore => ignore))),
       )
       .toPromise()
