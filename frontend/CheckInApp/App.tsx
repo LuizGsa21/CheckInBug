@@ -96,11 +96,17 @@ function App(): JSX.Element {
     const appStateChangedHandler = async (state: AppStateStatus) => {
       console.log('AppStateStatus', state);
       if (state === 'active') {
+        UserService.cancelPendingUserRefresh();
         const r = await UserService.UserInfo();
         if (r.success) {
           setUserInfo(r.data);
         } else {
-          Alert.alert(r.data || 'Unknown error (UserInfo)');
+          if (r.cancelled) {
+            console.log('request cancelled');
+          } else {
+            Alert.alert(r.data || 'Unknown error (UserInfo)');
+          }
+
         }
       }
     };
