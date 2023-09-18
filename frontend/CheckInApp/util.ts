@@ -1,8 +1,9 @@
 /* eslint-disable prettier/prettier */
-import {BehaviorSubject, combineLatest, from, isObservable, Observable, of, Subscription} from "rxjs";
+import {BehaviorSubject, combineLatest, from, isObservable, Observable, of, Subject, Subscription} from "rxjs";
 import Axios, {CancelToken} from 'axios';
-import {distinctUntilChanged, finalize, map, mergeMap, take} from "rxjs/operators";
+import {distinctUntilChanged, finalize, map, mergeMap, take, takeUntil} from "rxjs/operators";
 import {fromPromise, isPromise} from "rxjs/internal-compatibility";
+import {useEffect, useRef, useState} from "react";
 
 export function simulateDelay(timeDelayByCall: number[], name: string) {
     let callCount = 0;
@@ -134,4 +135,65 @@ function toObservable(obj: any, ...args: any[]): Observable<any> {
     } else {
         return from(obj);
     }
+}
+
+
+/**
+ * A hook that returns:
+ * - An `execute` fn that can be passed to event handler (eg: onPress)
+ * - A `canExecute` flag that can be passed to a prop that handles the actionable state of a **Call-to-action** (eg:
+ * `Button.disabled` prop)
+ *
+ * @param execute
+ * @param canExecute
+ */
+export const useCustomCommand = <TExecute>(
+    execute: SelfOrFactory<Observable<TExecute>> | SelfOrFactory<Promise<TExecute>>,
+    canExecute?: Observable<boolean>,
+) => {
+    const unmount$ = useUnmount();
+    const [_, setIsExecuting] = useState(false)
+    const [__, setCanExecute] = useState(false)
+
+    const commmand = useConstant(() => {
+        const cmd = new CustomCommand(execute, canExecute);
+        combineLatest([cmd.canExecute$, cmd.isExecuting$])
+            .pipe(takeUntil(unmount$))
+            .subscribe(
+                ([a, b]) => {
+                    setCanExecute(a)
+                    setIsExecuting(b)
+                }
+            , (e) => console.log(e), () => {});
+
+        unmount$.subscribe(() => cmd.unsubscribe(), (e) => console.log(e), () => {});
+        return cmd;
+    });
+
+    commmand.setExecute(execute)
+
+    return commmand;
+};
+
+export const useConstant = <T>(constantFactory: SelfOrFactory<T>): T => {
+    const constantRef = useRef<T>();
+
+    if (!constantRef.current) {
+        constantRef.current = typeof constantFactory === 'function' ? (constantFactory as () => T)() : constantFactory;
+    }
+
+    return constantRef.current;
+};
+
+
+export function useUnmount(): Observable<boolean> {
+    const obs = useConstant(() => new Subject<boolean>())
+
+    useEffect(() => {
+        return () => {
+            obs.next(true)
+        };
+    }, []);
+
+    return obs.asObservable()
 }

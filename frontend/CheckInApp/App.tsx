@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 
 import {UserInfo, UserService} from './user.service';
+import {useCustomCommand} from "./util";
 
 function forceRenderHook() {
   const [count, setCount] = useState(0);
@@ -30,6 +31,44 @@ const HomeScreen: FC<{userInfo: UserInfo}> = ({userInfo}) => {
     (userInfo.lastCheckIn.timeIn != null &&
       userInfo.lastCheckIn.timeOut != null);
 
+  const checkInCommand = useCustomCommand(async () => {
+    await UserService.CheckIn().then(response => {
+      if (response.success) {
+        userInfo!.lastCheckIn = response.data;
+        forceRender();
+      } else {
+        Alert.alert(response.data || 'Unknown error');
+        if (response.data === 'You must be checked in to checkout') {
+          return UserService.UserInfo().then(r => {
+            if (r.success) {
+              userInfo!.lastCheckIn = r.data.lastCheckIn;
+              forceRender();
+            }
+          });
+        }
+      }
+    })
+  });
+  const checkOutCommand = useCustomCommand(async () => {
+    await UserService.CheckOut().then(response => {
+      if (response.success) {
+        userInfo!.lastCheckIn = response.data;
+        forceRender();
+      } else {
+        Alert.alert(response.data || 'Unknown error');
+        if (response.data === 'You were forced checkout') {
+          return UserService.UserInfo().then(r => {
+            if (r.success) {
+              userInfo!.lastCheckIn = r.data.lastCheckIn;
+              forceRender();
+            }
+          });
+        }
+      }
+    })
+  });
+
+
   return (
     <View style={{flex: 1, alignItems: 'center', justifyContent: 'center'}}>
       <Text style={{color: canCheckIn ? 'red' : 'green'}}>
@@ -40,48 +79,16 @@ const HomeScreen: FC<{userInfo: UserInfo}> = ({userInfo}) => {
       </Text>
       {canCheckIn && (
         <Button
-          onPress={() => {
-            UserService.CheckIn().then(response => {
-              if (response.success) {
-                userInfo!.lastCheckIn = response.data;
-                forceRender();
-              } else {
-                Alert.alert(response.data || 'Unknown error');
-                if (response.data === 'You must be checked in to checkout') {
-                  return UserService.UserInfo().then(r => {
-                    if (r.success) {
-                      userInfo!.lastCheckIn = r.data.lastCheckIn;
-                      forceRender();
-                    }
-                  });
-                }
-              }
-            });
-          }}
+          onPress={checkInCommand.execute}
+          disabled={checkInCommand.isExecuting}
           title={'Check-In'}
         />
       )}
 
       {!canCheckIn && (
         <Button
-          onPress={() => {
-            UserService.CheckOut().then(response => {
-              if (response.success) {
-                userInfo!.lastCheckIn = response.data;
-                forceRender();
-              } else {
-                Alert.alert(response.data || 'Unknown error');
-                if (response.data === 'You were forced checkout') {
-                  return UserService.UserInfo().then(r => {
-                    if (r.success) {
-                      userInfo!.lastCheckIn = r.data.lastCheckIn;
-                      forceRender();
-                    }
-                  });
-                }
-              }
-            });
-          }}
+          onPress={checkOutCommand.execute}
+          disabled={checkOutCommand.isExecuting}
           title={'Checkout'}
         />
       )}
